@@ -64,13 +64,11 @@ footer a{
 
 <h1 id="title"></h1>
 
-<!-- اختيار الكوكب -->
 <div class="box" id="planetBox">
   <h3 id="choosePlanet"></h3>
   <div class="grid" id="planetGrid"></div>
 </div>
 
-<!-- إدخال الاسم -->
 <div class="box hidden" id="nameBox">
   <h3 id="planetTitle"></h3>
   <input id="userName">
@@ -78,49 +76,43 @@ footer a{
   <button class="back" onclick="goHome()" id="backBtn1"></button>
 </div>
 
-<!-- الرصيد -->
 <div class="box hidden" id="balanceBox">
   <h3 id="welcomeText"></h3>
   <div class="money" id="showMoney"></div>
   <button class="back" onclick="goHome()" id="backBtn2"></button>
 </div>
 
-<!-- الإدارة -->
 <div class="box">
   <button onclick="showAdmin()" id="adminBtn"></button>
 </div>
 
-<!-- الترجمة (ثابت تحت الإدارة) -->
 <div class="box">
   <button onclick="toggleLanguage()" id="langBtn"></button>
 </div>
 
-<!-- تسجيل دخول الإدارة -->
 <div class="box hidden" id="adminLogin">
   <input id="adminPass" type="password">
   <button onclick="loginAdmin()" id="adminLoginBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn3"></button>
 </div>
 
-<!-- لوحة الإدارة -->
 <div class="box hidden" id="adminPanel">
-  <input id="adminName">
-  <input id="adminMoney" type="number">
+  <input id="adminName" placeholder="Name">
+  <input id="adminMoney" type="number" placeholder="Money">
   <select id="adminPlanet"></select>
   <button onclick="saveAccount()" id="saveBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn4"></button>
 </div>
 
 <footer>
-  <a href="https://www.instagram.com/_jw16?igsh=bnp1cHJpMTI2ZDU0" target="_blank">
-    karam almahayni
-  </a>
+  <a href="https://www.instagram.com/_jw16" target="_blank">karam almahayni</a>
 </footer>
 
 <script>
+const SERVER_URL = "https://YOUR-SERVER.onrender.com"; // 🔴 غيّر هذا
+
 let isArabic=true;
 let selectedPlanet="";
-let bank=JSON.parse(localStorage.getItem("bank"))||{};
 const ADMIN_PASSWORD="1234";
 
 const planets=[
@@ -138,19 +130,14 @@ const planets=[
 
 function applyLanguage(){
  document.documentElement.dir=isArabic?"rtl":"ltr";
- document.documentElement.lang=isArabic?"ar":"en";
-
  title.innerText=isArabic?"🏦 بنك ستار المجري":"🏦 Galactic Star Bank";
  choosePlanet.innerText=isArabic?"اختر كوكبك":"Choose Your Planet";
- userName.placeholder=isArabic?"اكتب اسمك":"Enter your name";
  enterBtn.innerText=isArabic?"دخول":"Enter";
  adminBtn.innerText=isArabic?"الإدارة":"Admin";
- adminPass.placeholder=isArabic?"كلمة المرور":"Password";
  adminLoginBtn.innerText=isArabic?"تسجيل الدخول":"Login";
  saveBtn.innerText=isArabic?"حفظ":"Save";
  backBtn1.innerText=backBtn2.innerText=backBtn3.innerText=backBtn4.innerText=isArabic?"عودة":"Back";
  langBtn.innerText=isArabic?"🇺🇸 English":"🇸🇾 العربية";
- welcomeText.innerText=isArabic?"مرحبًا":"Welcome";
 
  planetGrid.innerHTML="";
  adminPlanet.innerHTML="";
@@ -171,26 +158,38 @@ function toggleLanguage(){isArabic=!isArabic;applyLanguage();}
 function hideAll(){planetBox.classList.add("hidden");nameBox.classList.add("hidden");balanceBox.classList.add("hidden");adminLogin.classList.add("hidden");adminPanel.classList.add("hidden");}
 function goHome(){hideAll();planetBox.classList.remove("hidden");}
 function choosePlanet(p){selectedPlanet=p;hideAll();planetTitle.innerText=p;nameBox.classList.remove("hidden");}
-function loginUser(){
+
+async function loginUser(){
  let name=userName.value.trim();
  if(!name)return;
- let key=name+"_"+selectedPlanet;
- showMoney.innerText=(bank[key]?.money||0)+" ⭐";
+
+ const res = await fetch(`${SERVER_URL}/balance?name=${name}&planet=${selectedPlanet}`);
+ const data = await res.json();
+
+ showMoney.innerText = data.money + " ⭐";
  hideAll();balanceBox.classList.remove("hidden");
 }
+
 function showAdmin(){hideAll();adminLogin.classList.remove("hidden");}
 function loginAdmin(){
- if(adminPass.value!==ADMIN_PASSWORD)return alert(isArabic?"كلمة المرور خاطئة":"Wrong password");
+ if(adminPass.value!==ADMIN_PASSWORD)return alert("Wrong password");
  hideAll();adminPanel.classList.remove("hidden");
 }
-function saveAccount(){
- bank[adminName.value+"_"+adminPlanet.value]={money:Number(adminMoney.value)};
- localStorage.setItem("bank",JSON.stringify(bank));
- alert(isArabic?"تم الحفظ":"Saved");
+
+async function saveAccount(){
+ await fetch(`${SERVER_URL}/save`,{
+   method:"POST",
+   headers:{ "Content-Type":"application/json" },
+   body:JSON.stringify({
+     name: adminName.value,
+     planet: adminPlanet.value,
+     money: Number(adminMoney.value)
+   })
+ });
+ alert("Saved");
 }
 
 applyLanguage();
 </script>
-
 </body>
 </html>
