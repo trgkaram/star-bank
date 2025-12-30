@@ -1,41 +1,41 @@
-
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <title>Star Bank</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <style>
 body{
   margin:0;
   font-family:Tahoma, Arial;
-  background:#000814;
   color:white;
   text-align:center;
+  background:radial-gradient(circle at top, #0b1230, #000);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
 }
 .box{
-  background:#0b1230;
-  margin:15px auto;
-  padding:20px;
+  background:rgba(11,16,38,0.9);
   width:92%;
   max-width:460px;
-  border-radius:15px;
+  margin:15px auto;
+  padding:20px;
+  border-radius:18px;
 }
 .hidden{display:none}
 .grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:12px;
+  gap:15px;
 }
-.planet{
-  background:#111a40;
-  padding:15px;
-  border-radius:12px;
+.planetBtn{
+  background:#11173a;
+  padding:18px 6px;
+  border-radius:15px;
   cursor:pointer;
+  font-weight:bold;
 }
 input,select,button{
   width:100%;
@@ -43,152 +43,153 @@ input,select,button{
   margin-top:10px;
   border-radius:10px;
   border:none;
-  font-size:14px;
+  font-size:15px;
 }
-button{background:#4fd1ff}
+button{background:#4fd1ff;cursor:pointer}
 .back{background:#444}
 .money{font-size:28px;color:gold}
-footer{margin:20px}
-footer a{color:#4fd1ff;text-decoration:none}
+footer{
+  margin-top:auto;
+  padding:15px;
+}
+footer a{
+  color:#4fd1ff;
+  text-decoration:none;
+  font-weight:bold;
+}
 </style>
 </head>
 
 <body>
 
-<h2 id="title"></h2>
+<h1 id="title"></h1>
 
+<!-- اختيار الكوكب -->
 <div class="box" id="planetBox">
   <h3 id="choosePlanet"></h3>
-  <div class="grid" id="planets"></div>
+  <div class="grid" id="planetGrid"></div>
 </div>
 
+<!-- إدخال الاسم -->
 <div class="box hidden" id="nameBox">
   <h3 id="planetTitle"></h3>
   <input id="userName">
-  <button onclick="enterUser()" id="enterBtn"></button>
-  <button class="back" onclick="goHome()" id="backBtn"></button>
+  <button onclick="loginUser()" id="enterBtn"></button>
+  <button class="back" onclick="goHome()" id="backBtn1"></button>
 </div>
 
-<div class="box hidden" id="walletBox">
-  <h3 id="welcome"></h3>
-  <div class="money" id="stars"></div>
+<!-- الرصيد -->
+<div class="box hidden" id="balanceBox">
+  <h3 id="welcomeText"></h3>
+  <div class="money" id="showMoney"></div>
   <button class="back" onclick="goHome()" id="backBtn2"></button>
 </div>
 
+<!-- الإدارة -->
 <div class="box">
   <button onclick="showAdmin()" id="adminBtn"></button>
 </div>
 
+<!-- الترجمة (ثابت تحت الإدارة) -->
 <div class="box">
-  <button onclick="toggleLang()" id="langBtn"></button>
+  <button onclick="toggleLanguage()" id="langBtn"></button>
 </div>
 
-<div class="box hidden" id="adminBox">
-  <input id="adminName">
-  <input id="adminStars" type="number">
-  <select id="adminPlanet"></select>
-  <button onclick="saveData()" id="saveBtn"></button>
+<!-- تسجيل دخول الإدارة -->
+<div class="box hidden" id="adminLogin">
+  <input id="adminPass" type="password">
+  <button onclick="loginAdmin()" id="adminLoginBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn3"></button>
 </div>
 
+<!-- لوحة الإدارة -->
+<div class="box hidden" id="adminPanel">
+  <input id="adminName">
+  <input id="adminMoney" type="number">
+  <select id="adminPlanet"></select>
+  <button onclick="saveAccount()" id="saveBtn"></button>
+  <button class="back" onclick="goHome()" id="backBtn4"></button>
+</div>
+
 <footer>
-<a href="https://www.instagram.com/_jw16?igsh=bnp1cHJpMTI2ZDU0" target="_blank">
-karam almahayni
-</a>
+  <a href="https://www.instagram.com/_jw16?igsh=bnp1cHJpMTI2ZDU0" target="_blank">
+    karam almahayni
+  </a>
 </footer>
 
 <script>
-// 🔴 ضع بيانات Firebase هنا
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-// 🌍 اللغة
-let ar=true;
+let isArabic=true;
 let selectedPlanet="";
-const ADMIN1="karam";
-const ADMIN2="admin";
+let bank=JSON.parse(localStorage.getItem("bank"))||{};
+const ADMIN_PASSWORD="1234";
 
 const planets=[
-{ar:"☀️ الشمس",en:"Sun"},
-{ar:"🔅 عطارد",en:"Mercury"},
-{ar:"🌸 الزهرة",en:"Venus"},
-{ar:"🌍 الأرض",en:"Earth"},
-{ar:"🌑 المريخ",en:"Mars"},
-{ar:"🪨 المشتري",en:"Jupiter"},
-{ar:"🪐 زحل",en:"Saturn"},
-{ar:"🔷 أورانوس",en:"Uranus"},
-{ar:"💎 نبتون",en:"Neptune"}
+ {ar:"☀️ الشمس",en:"☀️ Sun"},
+ {ar:"🔅 عطارد",en:"🔅 Mercury"},
+ {ar:"🌸 الزهرة",en:"🌸 Venus"},
+ {ar:"🌍 الأرض",en:"🌍 Earth"},
+ {ar:"🌑 المريخ",en:"🌑 Mars"},
+ {ar:"🪨 المشتري",en:"🪨 Jupiter"},
+ {ar:"🪐 زحل",en:"🪐 Saturn"},
+ {ar:"🔷 أورانوس",en:"🔷 Uranus"},
+ {ar:"💎 نبتون",en:"💎 Neptune"},
+ {ar:"❄️ بلوتو",en:"❄️ Pluto"}
 ];
 
-function applyLang(){
- title.innerText=ar?"🏦 بنك ستار":"🏦 Star Bank";
- choosePlanet.innerText=ar?"اختر كوكبك":"Choose planet";
- userName.placeholder=ar?"اكتب اسمك":"Your name";
- enterBtn.innerText=ar?"دخول":"Enter";
- adminBtn.innerText=ar?"الإدارة":"Admin";
- saveBtn.innerText=ar?"حفظ":"Save";
- backBtn.innerText=backBtn2.innerText=backBtn3.innerText=ar?"عودة":"Back";
- langBtn.innerText=ar?"🇺🇸 English":"🇸🇾 العربية";
+function applyLanguage(){
+ document.documentElement.dir=isArabic?"rtl":"ltr";
+ document.documentElement.lang=isArabic?"ar":"en";
 
- planetsDiv.innerHTML="";
+ title.innerText=isArabic?"🏦 بنك ستار المجري":"🏦 Galactic Star Bank";
+ choosePlanet.innerText=isArabic?"اختر كوكبك":"Choose Your Planet";
+ userName.placeholder=isArabic?"اكتب اسمك":"Enter your name";
+ enterBtn.innerText=isArabic?"دخول":"Enter";
+ adminBtn.innerText=isArabic?"الإدارة":"Admin";
+ adminPass.placeholder=isArabic?"كلمة المرور":"Password";
+ adminLoginBtn.innerText=isArabic?"تسجيل الدخول":"Login";
+ saveBtn.innerText=isArabic?"حفظ":"Save";
+ backBtn1.innerText=backBtn2.innerText=backBtn3.innerText=backBtn4.innerText=isArabic?"عودة":"Back";
+ langBtn.innerText=isArabic?"🇺🇸 English":"🇸🇾 العربية";
+ welcomeText.innerText=isArabic?"مرحبًا":"Welcome";
+
+ planetGrid.innerHTML="";
  adminPlanet.innerHTML="";
  planets.forEach(p=>{
-   let d=document.createElement("div");
-   d.className="planet";
-   d.innerText=ar?p.ar:p.en;
-   d.onclick=()=>selectPlanet(ar?p.ar:p.en);
-   planetsDiv.appendChild(d);
+   let btn=document.createElement("div");
+   btn.className="planetBtn";
+   btn.innerText=isArabic?p.ar:p.en;
+   btn.onclick=()=>choosePlanet(isArabic?p.ar:p.en);
+   planetGrid.appendChild(btn);
 
-   let o=document.createElement("option");
-   o.text=ar?p.ar:p.en;
-   adminPlanet.add(o);
+   let opt=document.createElement("option");
+   opt.text=isArabic?p.ar:p.en;
+   adminPlanet.add(opt);
  });
 }
 
-const planetsDiv=document.getElementById("planets");
-
-function toggleLang(){ar=!ar;applyLang();}
-function hideAll(){
- planetBox.classList.add("hidden");
- nameBox.classList.add("hidden");
- walletBox.classList.add("hidden");
- adminBox.classList.add("hidden");
-}
+function toggleLanguage(){isArabic=!isArabic;applyLanguage();}
+function hideAll(){planetBox.classList.add("hidden");nameBox.classList.add("hidden");balanceBox.classList.add("hidden");adminLogin.classList.add("hidden");adminPanel.classList.add("hidden");}
 function goHome(){hideAll();planetBox.classList.remove("hidden");}
-function selectPlanet(p){selectedPlanet=p;hideAll();planetTitle.innerText=p;nameBox.classList.remove("hidden");}
-
-async function enterUser(){
- const name=userName.value.trim();
+function choosePlanet(p){selectedPlanet=p;hideAll();planetTitle.innerText=p;nameBox.classList.remove("hidden");}
+function loginUser(){
+ let name=userName.value.trim();
  if(!name)return;
- const id=name+"_"+selectedPlanet;
- const doc=await db.collection("accounts").doc(id).get();
- const starsCount=doc.exists?doc.data().stars:0;
- stars.innerText=starsCount+" ⭐";
- welcome.innerText=(ar?"مرحبًا ":"Welcome ")+name;
- hideAll();walletBox.classList.remove("hidden");
+ let key=name+"_"+selectedPlanet;
+ showMoney.innerText=(bank[key]?.money||0)+" ⭐";
+ hideAll();balanceBox.classList.remove("hidden");
+}
+function showAdmin(){hideAll();adminLogin.classList.remove("hidden");}
+function loginAdmin(){
+ if(adminPass.value!==ADMIN_PASSWORD)return alert(isArabic?"كلمة المرور خاطئة":"Wrong password");
+ hideAll();adminPanel.classList.remove("hidden");
+}
+function saveAccount(){
+ bank[adminName.value+"_"+adminPlanet.value]={money:Number(adminMoney.value)};
+ localStorage.setItem("bank",JSON.stringify(bank));
+ alert(isArabic?"تم الحفظ":"Saved");
 }
 
-function showAdmin(){
- const name=prompt(ar?"اسم الأدمن":"Admin name");
- if(name!==ADMIN1 && name!==ADMIN2) return alert("Access denied");
- adminName.value=name;
- hideAll();adminBox.classList.remove("hidden");
-}
-
-function saveData(){
- const id=adminName.value+"_"+adminPlanet.value;
- db.collection("accounts").doc(id).set({
-   stars:Number(adminStars.value)
- });
- alert(ar?"تم الحفظ":"Saved");
-}
-
-applyLang();
+applyLanguage();
 </script>
 
 </body>
