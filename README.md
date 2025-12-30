@@ -8,13 +8,16 @@
 <style>
 body{
   margin:0;
-  font-family:Tahoma, Arial;
+  font-family:Tahoma, Arial, sans-serif;
   color:white;
   text-align:center;
   background:radial-gradient(circle at top, #0b1230, #000);
   min-height:100vh;
   display:flex;
   flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding-top:20px;
 }
 .box{
   background:rgba(11,16,38,0.9);
@@ -23,12 +26,14 @@ body{
   margin:15px auto;
   padding:20px;
   border-radius:18px;
+  box-sizing:border-box;
 }
 .hidden{display:none}
 .grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:15px;
+  margin-top:10px;
 }
 .planetBtn{
   background:#11173a;
@@ -36,6 +41,10 @@ body{
   border-radius:15px;
   cursor:pointer;
   font-weight:bold;
+  transition:0.2s;
+}
+.planetBtn:hover{
+  background:#1a2360;
 }
 input,select,button{
   width:100%;
@@ -44,10 +53,12 @@ input,select,button{
   border-radius:10px;
   border:none;
   font-size:15px;
+  box-sizing:border-box;
 }
-button{background:#4fd1ff;cursor:pointer}
+button{background:#4fd1ff;cursor:pointer;transition:0.2s;}
+button:hover{opacity:0.9;}
 .back{background:#444}
-.money{font-size:28px;color:gold}
+.money{font-size:28px;color:gold;margin:15px 0;}
 footer{
   margin-top:auto;
   padding:15px;
@@ -58,19 +69,18 @@ footer a{
   font-weight:bold;
 }
 </style>
+
 </head>
 
 <body>
 
 <h1 id="title"></h1>
 
-<!-- اختيار الكوكب -->
 <div class="box" id="planetBox">
   <h3 id="choosePlanet"></h3>
   <div class="grid" id="planetGrid"></div>
 </div>
 
-<!-- إدخال الاسم -->
 <div class="box hidden" id="nameBox">
   <h3 id="planetTitle"></h3>
   <input id="userName">
@@ -78,50 +88,51 @@ footer a{
   <button class="back" onclick="goHome()" id="backBtn1"></button>
 </div>
 
-<!-- الرصيد -->
 <div class="box hidden" id="balanceBox">
   <h3 id="welcomeText"></h3>
   <div class="money" id="showMoney"></div>
   <button class="back" onclick="goHome()" id="backBtn2"></button>
 </div>
 
-<!-- الإدارة -->
 <div class="box">
   <button onclick="showAdmin()" id="adminBtn"></button>
 </div>
 
-<!-- الترجمة (ثابت تحت الإدارة) -->
 <div class="box">
   <button onclick="toggleLanguage()" id="langBtn"></button>
 </div>
 
-<!-- تسجيل دخول الإدارة -->
 <div class="box hidden" id="adminLogin">
   <input id="adminPass" type="password">
   <button onclick="loginAdmin()" id="adminLoginBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn3"></button>
 </div>
 
-<!-- لوحة الإدارة -->
 <div class="box hidden" id="adminPanel">
-  <input id="adminName">
-  <input id="adminMoney" type="number">
+  <input id="adminName" placeholder="Name">
+  <input id="adminMoney" type="number" placeholder="Money">
   <select id="adminPlanet"></select>
   <button onclick="saveAccount()" id="saveBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn4"></button>
 </div>
 
 <footer>
-  <a href="https://www.instagram.com/_jw16?igsh=bnp1cHJpMTI2ZDU0" target="_blank">
+  <a href="https://www.instagram.com/_jw16" target="_blank">
     karam almahayni
   </a>
 </footer>
 
+<!-- Supabase Library -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
 <script>
+const supabaseUrl = "https://ontkahmdlrsyvooijzaj.supabase.co";
+const supabaseKey = "sb_publishable_9FICwwVF7DnS8bydM2rYFA_PAo3xftF";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
 let isArabic=true;
 let selectedPlanet="";
-let bank=JSON.parse(localStorage.getItem("bank"))||{};
-const ADMIN_PASSWORD="1234";
+const ADMIN_PASSWORD="6767";
 
 const planets=[
  {ar:"☀️ الشمس",en:"☀️ Sun"},
@@ -171,21 +182,49 @@ function toggleLanguage(){isArabic=!isArabic;applyLanguage();}
 function hideAll(){planetBox.classList.add("hidden");nameBox.classList.add("hidden");balanceBox.classList.add("hidden");adminLogin.classList.add("hidden");adminPanel.classList.add("hidden");}
 function goHome(){hideAll();planetBox.classList.remove("hidden");}
 function choosePlanet(p){selectedPlanet=p;hideAll();planetTitle.innerText=p;nameBox.classList.remove("hidden");}
-function loginUser(){
+
+async function loginUser(){
  let name=userName.value.trim();
  if(!name)return;
- let key=name+"_"+selectedPlanet;
- showMoney.innerText=(bank[key]?.money||0)+" ⭐";
+
+ const { data } = await supabase
+   .from("accounts")
+   .select("money")
+   .eq("name",name)
+   .eq("planet",selectedPlanet)
+   .single();
+
+ showMoney.innerText=(data?.money||0)+" ⭐";
  hideAll();balanceBox.classList.remove("hidden");
 }
+
 function showAdmin(){hideAll();adminLogin.classList.remove("hidden");}
+
 function loginAdmin(){
- if(adminPass.value!==ADMIN_PASSWORD)return alert(isArabic?"كلمة المرور خاطئة":"Wrong password");
+ if(adminPass.value!==ADMIN_PASSWORD)
+   return alert(isArabic?"كلمة المرور خاطئة":"Wrong password");
  hideAll();adminPanel.classList.remove("hidden");
 }
-function saveAccount(){
- bank[adminName.value+"_"+adminPlanet.value]={money:Number(adminMoney.value)};
- localStorage.setItem("bank",JSON.stringify(bank));
+
+async function saveAccount(){
+ const name=adminName.value.trim();
+ const planet=adminPlanet.value;
+ const money=Number(adminMoney.value);
+ if(!name || !planet) return;
+
+ const { data: existing } = await supabase
+   .from("accounts")
+   .select("id")
+   .eq("name",name)
+   .eq("planet",planet)
+   .single();
+
+ if(existing){
+   await supabase.from("accounts").update({money}).eq("id",existing.id);
+ }else{
+   await supabase.from("accounts").insert([{name,planet,money}]);
+ }
+
  alert(isArabic?"تم الحفظ":"Saved");
 }
 
