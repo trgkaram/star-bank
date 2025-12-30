@@ -58,19 +58,20 @@ footer a{
   font-weight:bold;
 }
 </style>
+
+<!-- Supabase -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
 
 <h1 id="title"></h1>
 
-<!-- اختيار الكوكب -->
 <div class="box" id="planetBox">
   <h3 id="choosePlanet"></h3>
   <div class="grid" id="planetGrid"></div>
 </div>
 
-<!-- إدخال الاسم -->
 <div class="box hidden" id="nameBox">
   <h3 id="planetTitle"></h3>
   <input id="userName">
@@ -78,49 +79,49 @@ footer a{
   <button class="back" onclick="goHome()" id="backBtn1"></button>
 </div>
 
-<!-- الرصيد -->
 <div class="box hidden" id="balanceBox">
   <h3 id="welcomeText"></h3>
   <div class="money" id="showMoney"></div>
   <button class="back" onclick="goHome()" id="backBtn2"></button>
 </div>
 
-<!-- الإدارة -->
 <div class="box">
   <button onclick="showAdmin()" id="adminBtn"></button>
 </div>
 
-<!-- الترجمة (ثابت تحت الإدارة) -->
 <div class="box">
   <button onclick="toggleLanguage()" id="langBtn"></button>
 </div>
 
-<!-- تسجيل دخول الإدارة -->
 <div class="box hidden" id="adminLogin">
   <input id="adminPass" type="password">
   <button onclick="loginAdmin()" id="adminLoginBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn3"></button>
 </div>
 
-<!-- لوحة الإدارة -->
 <div class="box hidden" id="adminPanel">
-  <input id="adminName">
-  <input id="adminMoney" type="number">
+  <input id="adminName" placeholder="Name">
+  <input id="adminMoney" type="number" placeholder="Money">
   <select id="adminPlanet"></select>
   <button onclick="saveAccount()" id="saveBtn"></button>
   <button class="back" onclick="goHome()" id="backBtn4"></button>
 </div>
 
 <footer>
-  <a href="https://www.instagram.com/_jw16?igsh=bnp1cHJpMTI2ZDU0" target="_blank">
+  <a href="https://www.instagram.com/_jw16" target="_blank">
     karam almahayni
   </a>
 </footer>
 
 <script>
+// 🔹 Supabase Config
+const supabaseUrl = "https://ontkahmdlrsyvooijzaj.supabase.co";
+const supabaseKey = "sb_publishable_9FICwwVF7DnS8bydM2rYFA_PAo3xftF";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+// 🔹 App Data
 let isArabic=true;
 let selectedPlanet="";
-let bank=JSON.parse(localStorage.getItem("bank"))||{};
 const ADMIN_PASSWORD="6767";
 
 const planets=[
@@ -136,6 +137,7 @@ const planets=[
  {ar:"❄️ بلوتو",en:"❄️ Pluto"}
 ];
 
+// 🔹 UI Functions
 function applyLanguage(){
  document.documentElement.dir=isArabic?"rtl":"ltr";
  document.documentElement.lang=isArabic?"ar":"en";
@@ -171,21 +173,50 @@ function toggleLanguage(){isArabic=!isArabic;applyLanguage();}
 function hideAll(){planetBox.classList.add("hidden");nameBox.classList.add("hidden");balanceBox.classList.add("hidden");adminLogin.classList.add("hidden");adminPanel.classList.add("hidden");}
 function goHome(){hideAll();planetBox.classList.remove("hidden");}
 function choosePlanet(p){selectedPlanet=p;hideAll();planetTitle.innerText=p;nameBox.classList.remove("hidden");}
-function loginUser(){
+
+// 🔹 Supabase Logic
+async function loginUser(){
  let name=userName.value.trim();
  if(!name)return;
- let key=name+"_"+selectedPlanet;
- showMoney.innerText=(bank[key]?.money||0)+" ⭐";
+
+ const { data } = await supabase
+   .from("accounts")
+   .select("money")
+   .eq("name",name)
+   .eq("planet",selectedPlanet)
+   .single();
+
+ showMoney.innerText=(data?.money||0)+" ⭐";
  hideAll();balanceBox.classList.remove("hidden");
 }
+
 function showAdmin(){hideAll();adminLogin.classList.remove("hidden");}
+
 function loginAdmin(){
- if(adminPass.value!==ADMIN_PASSWORD)return alert(isArabic?"كلمة المرور خاطئة":"Wrong password");
+ if(adminPass.value!==ADMIN_PASSWORD)
+   return alert(isArabic?"كلمة المرور خاطئة":"Wrong password");
  hideAll();adminPanel.classList.remove("hidden");
 }
-function saveAccount(){
- bank[adminName.value+"_"+adminPlanet.value]={money:Number(adminMoney.value)};
- localStorage.setItem("bank",JSON.stringify(bank));
+
+async function saveAccount(){
+ const name=adminName.value.trim();
+ const planet=adminPlanet.value;
+ const money=Number(adminMoney.value);
+ if(!name)return;
+
+ const { data: existing } = await supabase
+   .from("accounts")
+   .select("id")
+   .eq("name",name)
+   .eq("planet",planet)
+   .single();
+
+ if(existing){
+   await supabase.from("accounts").update({money}).eq("id",existing.id);
+ }else{
+   await supabase.from("accounts").insert([{name,planet,money}]);
+ }
+
  alert(isArabic?"تم الحفظ":"Saved");
 }
 
